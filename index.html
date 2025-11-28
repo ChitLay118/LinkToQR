@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="my">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Link -> QR Code (Simple Webapp)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<!-- Tailwind CSS CDN (Customized for Dark Mode) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+    // Customizing Tailwind colors for a sleek, dark aesthetic
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    'primary-bg': '#071128', // Dark blue background
+                    'card-bg': 'rgba(11, 18, 32, 0.7)', // Semi-transparent for frosted effect
+                    'accent': '#06b6d4', // Teal accent color
+                    'text-light': '#e6eef8',
+                    'text-muted': '#94a3b8',
+                },
+                fontFamily: {
+                    sans: ['Inter', 'system-ui', 'sans-serif'],
+                },
+            }
+        }
+    }
+</script>
+</head>
+<body class="bg-primary-bg min-h-screen flex items-center justify-center p-6 font-sans antialiased text-text-light" style="background-image: linear-gradient(180deg, #071128 0%, #071022 100%);">
+    <!-- Main Card Container -->
+    <div class="w-full max-w-4xl bg-card-bg backdrop-blur-md rounded-2xl shadow-2xl p-6 md:p-10 border border-gray-800/50">
+        
+        <!-- Header -->
+        <h1 class="text-3xl font-bold text-text-light mb-2">လင့်ခ်မှ QR ကုဒ်ထုတ်လုပ်ခြင်း</h1>
+        <p class="text-text-muted mb-8 text-base">သင့်ရဲ့ URL (သို့မဟုတ် စာသား) ကို ထည့်သွင်းပြီး စိတ်ကြိုက် QR ကုဒ်ကို PNG/SVG အဖြစ် ဖန်တီးပါ။</p>
+
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Left Column: Controls -->
+            <div class="flex-1 lg:max-w-md">
+                <!-- URL Input -->
+                <div class="mb-4">
+                    <label for="url" class="block text-text-muted text-xs font-medium mb-1">လင့်ခ် (URL)</label>
+                    <input id="url" type="url" placeholder="https://example.com" value="https://example.com"
+                           class="w-full p-3 rounded-xl bg-gray-900/40 border border-gray-700/50 text-text-light focus:ring-2 focus:ring-accent focus:border-accent transition duration-200 shadow-inner">
+                </div>
+
+                <!-- Size & EC -->
+                <div class="flex gap-4 mb-6">
+                    <div class="flex-1">
+                        <label for="size" class="block text-text-muted text-xs font-medium mb-1">အရွယ်အစား (px)</label>
+                        <input id="size" type="text" inputmode="numeric" value="300"
+                               class="w-full p-3 rounded-xl bg-gray-900/40 border border-gray-700/50 text-text-light focus:ring-2 focus:ring-accent focus:border-accent transition duration-200 shadow-inner">
+                    </div>
+                    <div class="w-32">
+                        <label for="ec" class="block text-text-muted text-xs font-medium mb-1">အမှားပြင်ဆင်မှု (EC)</label>
+                        <select id="ec"
+                                class="w-full p-3 rounded-xl bg-gray-900/40 border border-gray-700/50 text-text-light focus:ring-2 focus:ring-accent focus:border-accent transition duration-200 shadow-inner">
+                            <!-- Tailwind CSS doesn't style options well, using Tailwind colors for options -->
+                            <option value="L" class="bg-gray-800 text-text-light">L (Low)</option>
+                            <option value="M" selected class="bg-gray-800 text-text-light">M (Medium)</option>
+                            <option value="Q" class="bg-gray-800 text-text-light">Q (Quartile)</option>
+                            <option value="H" class="bg-gray-800 text-text-light">H (High)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Colors -->
+                <div class="flex gap-4 mb-6">
+                    <div class="flex-1">
+                        <label for="fg" class="block text-text-muted text-xs font-medium mb-1">ရှေ့ခံအရောင် (Foreground)</label>
+                        <div class="flex items-center gap-3">
+                            <input id="fg" type="color" value="#0f172a"
+                                   class="w-12 h-10 p-1 border border-gray-700/50 rounded-lg cursor-pointer bg-gray-900/40">
+                            <span class="text-sm text-text-light font-semibold" id="fgColorValue">#0f172a</span>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <label for="bg" class="block text-text-muted text-xs font-medium mb-1">နောက်ခံအရောင် (Background)</label>
+                        <div class="flex items-center gap-3">
+                            <input id="bg" type="color" value="#ffffff"
+                                   class="w-12 h-10 p-1 border border-gray-700/50 rounded-lg cursor-pointer bg-gray-900/40">
+                            <span class="text-sm text-text-light font-semibold" id="bgColorValue">#ffffff</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Controls -->
+                <div class="flex flex-wrap gap-3 mt-8">
+                    <button id="generate" class="flex-1 min-w-[120px] bg-accent hover:bg-teal-400 text-gray-900 font-bold py-3 px-4 rounded-xl shadow-lg shadow-accent/30 transition duration-200 active:scale-[0.98]">
+                        ထုတ်လုပ်ရန် (Generate)
+                    </button>
+                    <button id="downloadPng" disabled class="flex-1 min-w-[120px] text-text-muted border border-gray-700/50 bg-gray-900/40 hover:bg-gray-800/50 py-3 px-4 rounded-xl transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-inner">
+                        PNG ဒေါင်းလုဒ်
+                    </button>
+                    <button id="downloadSvg" disabled class="flex-1 min-w-[120px] text-text-muted border border-gray-700/50 bg-gray-900/40 hover:bg-gray-800/50 py-3 px-4 rounded-xl transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-inner">
+                        SVG ဒေါင်းလုဒ်
+                    </button>
+                    <button id="copyLink" class="flex-1 min-w-[120px] text-text-muted border border-gray-700/50 bg-gray-900/40 hover:bg-gray-800/50 py-3 px-4 rounded-xl transition duration-200 active:scale-[0.98] shadow-inner">
+                        လင့်ခ် ကူးယူ
+                    </button>
+                </div>
+
+                <!-- Message Display Area -->
+                <p id="message" class="text-sm font-medium mt-4 min-h-[1.5rem]"></p>
+
+                <p class="text-xs text-text-muted mt-4">သတိပေးချက်: အကောင်းဆုံးအတွေ့အကြုံအတွက် HTTPS လင့်ခ်များ အသုံးပြုပါ။</p>
+            </div>
+
+            <!-- Right Column: Preview -->
+            <div class="flex-1 lg:max-w-md">
+                <div id="preview" class="w-full h-full aspect-square flex items-center justify-center p-6 rounded-xl border border-dashed border-gray-700/50 bg-gray-900/40 min-h-[250px] shadow-lg">
+                    <!-- QR will render here -->
+                    <!-- The holder is styled white background to ensure QR visibility -->
+                    <div id="qrcodeHolder" aria-hidden="false" class="p-2 bg-white rounded-lg shadow-2xl"></div>
+                </div>
+
+                <div class="flex justify-center gap-4 text-xs text-text-muted mt-4">
+                    <div class="flex items-center gap-1">
+                        <!-- Icon for Size (Ruler) -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-accent"><path d="M16.5 3c-1.74 0-3.41 1.25-4.5 3-1.09-1.75-2.76-3-4.5-3-2.5 0-4.5 2-4.5 4.5V17c0 3 3 5 6 5s6-2 6-5V7.5"/></svg>
+                        အရွယ်အစား: <span id="previewSize" class="font-semibold text-text-light">300</span> px
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <!-- Icon for Format (File) -->
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-accent"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                        ဖော်မတ်: <span id="previewFormat" class="font-semibold text-text-light">Canvas / Img</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="text-xs text-text-muted border-t border-gray-800/50 pt-4 mt-8 flex justify-between flex-wrap gap-2">
+            <div>ရိုးရှင်းသော QR generator ဖြင့် ဖန်တီးထားပါသည် • အချက်အလက် ကောက်ယူခြင်းမရှိပါ</div>
+            <div>အားလုံးကိုကျေးဇူးတင်ရှိပါသည်</div>
+        </div>
+    </div>
+
+  <!-- QRCode.js from cdn (small and popular) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <script>
+  // Elements
+  const urlInput = document.getElementById('url');
+  const sizeInput = document.getElementById('size');
+  const ecInput = document.getElementById('ec');
+  const fgInput = document.getElementById('fg');
+  const bgInput = document.getElementById('bg');
+  const generateBtn = document.getElementById('generate');
+  const downloadPngBtn = document.getElementById('downloadPng');
+  const downloadSvgBtn = document.getElementById('downloadSvg');
+  const copyLinkBtn = document.getElementById('copyLink');
+  const holder = document.getElementById('qrcodeHolder');
+  const previewSizeSpan = document.getElementById('previewSize');
+  const previewFormatSpan = document.getElementById('previewFormat');
+  const messageDisplay = document.getElementById('message');
+  const fgColorValueSpan = document.getElementById('fgColorValue');
+  const bgColorValueSpan = document.getElementById('bgColorValue');
+
+
+  let currentSVG = null; // store svg text
+  let currentCanvas = null;
+
+  // Function to update hex code display next to color picker
+  const updateColorDisplays = () => {
+        fgColorValueSpan.textContent = fgInput.value.toUpperCase();
+        bgColorValueSpan.textContent = bgInput.value.toUpperCase();
+    };
+
+  function showMessage(text, isError = false) {
+    messageDisplay.textContent = text;
+    messageDisplay.style.color = isError ? '#f97171' : '#06b6d4'; // Use Tailwind's red/teal
+    // Clear message after 3 seconds
+    setTimeout(() => messageDisplay.textContent = '', 3000);
+  }
+
+  function clearHolder(){
+    holder.innerHTML = '';
+    currentSVG = null;
+    currentCanvas = null;
+    downloadPngBtn.disabled = true;
+    downloadSvgBtn.disabled = true;
+  }
+
+  function sanitizeUrl(u){
+    if(!u) return '';
+    // quick heuristic: if user writes without protocol, add https://
+    if(!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(u)){
+      return 'https://' + u;
+    }
+    return u;
+  }
+
+  function generate(){
+    clearHolder();
+    const text = sanitizeUrl(urlInput.value.trim());
+    if(!text){ showMessage('လင့်ခ် (URL) ကို ထည့်သွင်းပေးပါ။', true); return; }
+
+    const size = Math.max(64, Math.min(1200, parseInt(sizeInput.value) || 300));
+    const ec = ecInput.value || 'M';
+    const fg = fgInput.value || '#000000';
+    const bg = bgInput.value || '#ffffff';
+
+    previewSizeSpan.textContent = size;
+    
+    // Use QRCode.js to render to a temporary element (it creates a canvas or table)
+    const tempDiv = document.createElement('div');
+    holder.appendChild(tempDiv);
+
+    // QRCode.js options: text, width, height, colorDark, colorLight, correctLevel
+    const QRErrorLevels = {L: 1, M: 0, Q: 3, H: 2}; // mapping for that library
+    // instantiate
+    const qr = new QRCode(tempDiv, {
+      text: text,
+      width: size,
+      height: size,
+      colorDark: fg,
+      colorLight: bg,
+      correctLevel: QRErrorLevels[ec] ?? 0
+    });
+
+    // QRCode.js creates either an <img> or <canvas> inside tempDiv.
+    // Wait a microtask to allow library to render.
+    setTimeout(() => {
+      // find canvas or img
+      const canvas = tempDiv.querySelector('canvas');
+      const img = tempDiv.querySelector('img');
+      
+      // Clear the temp div and display the generated content (if any)
+      holder.innerHTML = '';
+
+      if(canvas){
+        // If canvas is available, use it for display and data
+        currentCanvas = canvas;
+        holder.appendChild(canvas); // Display the canvas directly
+        downloadPngBtn.disabled = false;
+        previewFormatSpan.textContent = 'PNG';
+        
+        // Create SVG wrapper from PNG data URL for SVG download (Raster SVG)
+        try{
+          const pngData = canvas.toDataURL('image/png');
+          // Embed PNG data inside an SVG file
+          const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}' viewBox='0 0 ${size} ${size}'><image href='${pngData}' width='${size}' height='${size}'/></svg>`;
+          currentSVG = svg;
+          downloadSvgBtn.disabled = false;
+          previewFormatSpan.textContent = 'PNG / Raster SVG';
+          showMessage('QR ကုဒ် အောင်မြင်စွာ ထုတ်လုပ်ပြီးပါပြီ။');
+        }catch(e){
+          downloadSvgBtn.disabled = true;
+          showMessage('PNG ထုတ်လုပ်ပြီးပါပြီ၊ သို့သော် SVG Export မအောင်မြင်ပါ။', true);
+        }
+      } else if(img){
+        // If only <img> with dataURL is available (fallback)
+        const src = img.src;
+        const imageEl = document.createElement('img');
+        imageEl.src = src;
+        imageEl.alt = 'QR Code';
+        imageEl.width = size;
+        imageEl.height = size;
+        holder.appendChild(imageEl);
+        
+        // create canvas from img for downloadable PNG/SVG data
+        const canvas2 = document.createElement('canvas');
+        canvas2.width = size; canvas2.height = size;
+        const ctx = canvas2.getContext('2d');
+        const imageObj = new Image();
+        imageObj.onload = () => {
+          ctx.drawImage(imageObj,0,0,size,size);
+          currentCanvas = canvas2;
+          downloadPngBtn.disabled = false;
+          previewFormatSpan.textContent = 'PNG / Raster SVG';
+          showMessage('QR ကုဒ် အောင်မြင်စွာ ထုတ်လုပ်ပြီးပါပြီ။');
+          // embed in svg
+          try{
+            const pngData2 = canvas2.toDataURL('image/png');
+            const svg2 = `<svg xmlns='http://www.w3.org/2000/svg' width='${size}' height='${size}' viewBox='0 0 ${size} ${size}'><image href='${pngData2}' width='${size}' height='${size}'/></svg>`;
+            currentSVG = svg2;
+            downloadSvgBtn.disabled = false;
+          }catch(e){
+            downloadSvgBtn.disabled = true;
+          }
+        };
+        imageObj.src = src;
+      } else {
+        // Final fallback: library failed to render anything useful
+        holder.innerHTML = '<div class="text-text-muted">QR Preview ကို ဖော်ပြနိုင်ခြင်းမရှိပါ။ Browser ကို ပြန်စစ်ဆေးပါ။</div>';
+        showMessage('QR ကုဒ် ထုတ်လုပ်မှု မအောင်မြင်ပါ။', true);
+        downloadPngBtn.disabled = true;
+        downloadSvgBtn.disabled = true;
+      }
+      // Remove temporary div after content is moved or analyzed
+      tempDiv.remove();
+
+    }, 50);
+  }
+
+  // Event Listeners for UI
+  generateBtn.addEventListener('click', generate);
+  urlInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); generate(); } });
+  fgInput.addEventListener('input', updateColorDisplays);
+  bgInput.addEventListener('input', updateColorDisplays);
+
+  downloadPngBtn.addEventListener('click', ()=>{
+    if(!currentCanvas){ showMessage('ဒေါင်းလုဒ်လုပ်ရန် QR ကုဒ်မရှိပါ။', true); return; }
+    const link = document.createElement('a');
+    link.download = 'qrcode.png';
+    link.href = currentCanvas.toDataURL('image/png');
+    link.click();
+    showMessage('PNG ဒေါင်းလုဒ် စတင်ပါပြီ။');
+  });
+
+  downloadSvgBtn.addEventListener('click', ()=>{
+    if(!currentSVG){ showMessage('SVG ဖော်မတ် မရရှိနိုင်ပါ။', true); return; }
+    const blob = new Blob([currentSVG], {type: 'image/svg+xml'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'qrcode.svg';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showMessage('SVG ဒေါင်းလုဒ် စတင်ပါပြီ။');
+  });
+
+  copyLinkBtn.addEventListener('click', async ()=>{
+    const text = sanitizeUrl(urlInput.value.trim());
+    if(!text){ showMessage('ကူးယူရန် လင့်ခ်မရှိပါ။', true); return; }
+    try{
+      // Using document.execCommand for better iFrame compatibility
+      const tempInput = document.createElement('textarea');
+      tempInput.value = text;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      document.execCommand('copy');
+      document.body.removeChild(tempInput);
+
+      copyLinkBtn.textContent = 'ကူးယူပြီး ✓';
+      showMessage('လင့်ခ်ကို Clipboard သို့ ကူးယူပြီးပါပြီ။', false);
+      setTimeout(()=> copyLinkBtn.textContent = 'လင့်ခ် ကူးယူ', 1400);
+    }catch(e){
+      showMessage('Clipboard သို့ ကူးယူမရပါ — ကိုယ်တိုင် ကူးယူပါ။', true);
+    }
+  });
+
+  // Initial setup on load
+  window.addEventListener('load', () => {
+    updateColorDisplays(); // Show initial hex values
+    generate(); // Generate initial QR code
+    });
+
+  </script>
+</body>
+</html>
